@@ -1,2 +1,3 @@
-# DATCOM-AA
-Repositorio para la asignatura Minería de Datos: Aspectos Avanzados del Máster en Ciencia de Datos e Ingeniería de Computadores. 
+# Minería de Datos: Aspectos Avanzados
+
+## Máster Universitario en Ciencia de Datos e Ingeniería de Computadores 21-22
