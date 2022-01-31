@@ -1,0 +1,53 @@
+---
+title: "Actividades para Clasificación No Balanceada"
+author: "Lidia Sánchez Mérida"
+output: pdf_document
+---
+
+# Actividad 1
+
+*Repeat the whole procedure carried out with "circle" data using now the subclus problem. Please be sure to avoid unnecesary operations / R code chunks. Write a short comment on the main conclusions obtained throughout the experimental analysis. Focus on the most interesting behavior achieved by the methods applied, observing whether there are some special capabilities to be stressed by any particular approach.*
+
+En este primer ejercicio el objetivo consiste en replicar el análisis exploratorio ejemplificado en el guión de prácticas sobre el dataset `subclus`. Antes de comenzar, cargamos las librerías necesarias para tratar con este conjunto de datos.
+
+```{r}
+# Cargamos las librerías necesarias para este proyecto
+library(caret)
+library(imbalance)
+library(dplyr)
+library(pROC)
+library(tidyr)
+```
+
+Como podemos apreciar en los siguientes resultados, este dataset cuenta con **599 registros y 3 variables**, dos independientes de tipo entero y una columna categórica compuesta por dos valores nomianles: las clases `negative` y `positive`. 
+
+```{r}
+# Cargamos el dataset desde el fichero
+subclus.df <- read.csv("subclus.csv", header = TRUE)
+# Establecemos los nombres de las columnas
+colnames(subclus.df) <- c("Att1", "Att2", "Class")
+# Nombramos la clase minoritaria como positiva
+subclus.df$Class <- relevel(subclus.df$Class, "positive") 
+# Dimensiones del dataset
+dim(subclus.df)
+# Tipos de datos 
+str(subclus.df)
+# 5 primeros registros
+head(subclus.df)
+# Clases 
+levels(subclus.df$Class)
+```
+A continuación podemos apreciar el resumen estadístico del conjunto de datos `subclus` que muestra las medidas estadísticas más comunes para las variables numéricas y el número de ejemplares para cada clase en el caso de las variables categóricas. 
+
+El **atributo `Att1` dispone de una media y mediana muy similares** lo que significa que no existe prácticamente diferencias entre el valor medio y la media de todos sus valores. Si observamos los cuartiles, podemos visualizar que existe una **amplia diversidad de datos** tanto en el primer intervalo compuesto por el mínimo y el primer cuartil, como en el segundo entre el primer cuartil y el segundo cuartil o mediana. No obstante, esta tendencia no ocurre en el tercer intervalo entre la mediana y el tercer cuartil puesto que la diferencia entre sus valores es considerablemente menor que en los casos anteriores.
+
+La segunda variable dependiente `Att2` también se caracteriza por tener una **media y mediana muy parecidas y por una gran diversidad de valores en todos los intervalos** disponibles. Por lo tanto, a diferencia de la variable anterior, este atributo parece no disponer de concentraciones de valores particulares.
+
+Finalmente según el recuento del número de muestras de cada clase, podemos determinar que la variable dependiente `Class` se encuentra **fuertemente desbalanceada** puesto que aproximádamente sólo el 16% de los datos pertenecen a la clase positiva. Esta teoría se encuentra respaldada por el valor tan considerablemente bajo de la métrica *imbalance ratio*. 
+
+```{r}
+# Resumen estadístico del dataset
+summary(subclus.df)
+# Ratio de balanceado de clases
+imbalanceRatio(subclus.df)
+```
