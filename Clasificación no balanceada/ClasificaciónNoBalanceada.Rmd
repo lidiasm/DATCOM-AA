@@ -43,7 +43,7 @@ El **atributo `Att1` dispone de una media y mediana muy similares** lo que signi
 
 La segunda variable dependiente `Att2` también se caracteriza por tener una **media y mediana muy parecidas y por una gran diversidad de valores en todos los intervalos** disponibles. Por lo tanto, a diferencia de la variable anterior, este atributo parece no disponer de concentraciones de valores particulares.
 
-Finalmente según el recuento del número de muestras de cada clase, podemos determinar que la variable dependiente `Class` se encuentra **fuertemente desbalanceada** puesto que aproximádamente sólo el 16% de los datos pertenecen a la clase positiva. Esta teoría se encuentra respaldada por el valor tan considerablemente bajo de la métrica *imbalance ratio*. 
+Finalmente según el recuento del número de muestras de cada clase, podemos determinar que la variable dependiente `Class` se encuentra **fuertemente desbalanceada** puesto que aproximádamente sólo el 16% de los datos pertenecen a la clase positiva. Esta teoría se encuentra respaldada por el mínimo valor que representa la métrica *imbalance ratio*.
 
 ```{r}
 # Resumen estadístico del dataset
@@ -51,3 +51,158 @@ summary(subclus.df)
 # Ratio de balanceado de clases
 imbalanceRatio(subclus.df)
 ```
+A continuación se representa un **diagrama de cajas de ambos atributos** para representar gráficamente los datos que contienen cada uno. En primer lugar podemos observar que disponen de **escalas bastante diferentes**, lo cual deberíamos tomarlo en consideración para el entrenamiento de modelos predictivos. Por otro lado, como se destacó en el anterior resumen estadístico, ambas variables disponen de una **gran variabilidad de datos** tal y como se puede apreciar en la longitud de sus respectivas cajas.
+
+```{r}
+# Variables independientes (atributos)
+x <- subclus.df[,1:2]
+# Variable dependiente (clase)
+y <- subclus.df[,3]
+# Boxplot de los dos atributos
+par(mfrow=c(1,2))
+for(i in 1:2) {
+  boxplot(x[,i], main=names(subclus.df)[i])
+}
+```
+En este segundo gráfico se representa el **desbalanceamiento de las clases** de la variable dependiente mediante los porcentajes de muestras asociados. Como se anticipó anteriormente, el número de ejemplos de la clase positiva apenas alcanza un 16% del total del dataset.
+
+```{r}
+# Número de muestras para cada clase
+n_classes <- c(sum(y=="positive"), sum(y=="negative"))
+# Porcentaje de muestras para cada clases
+pct <- round(n_classes/sum(n_classes)*100, digits=2)
+# Etiquetas lingüísticas para representar las clases
+lbls <- levels(subclus.df$Class)
+# Añade los porcentajes de muestras a cada etiqueta
+lbls <- paste(lbls, pct) 
+lbls <- paste(lbls, "%", sep="")
+# Gráfico de tarta para representar el balanceado de clases
+pie(n_classes, labels=lbls, main="Class distribution")
+```
+
+Continuamos con la representación de gráficos multivariantes como ocurre en el siguiente *chunk*, en el que se muestran los datos asociados a los dos atributos disponibles coloreados según la clase a la que pertenecen. Las matrices de puntos suelen ser útiles para identificar asociaciones entre atributos y con respecto a las propias clases a predecir. Sin embargo en este caso parece que **no existe ningún patrón**.
+
+```{r}
+# Matriz de puntos para representar los dos atributos y las muestras según
+# a la clase a la que pertenecen
+featurePlot(x=x, y=y, plot="ellipse")
+```
+
+En el siguiente gráfico se representan los diagramas de cajas relativos a cada uno de los atributos disponibles identificando las muestras pertenecientes a cada clase. Tal y como podemos observar, al igual que en el dataset *circle*, en este conjunto de datos también podemos observar que los **ejemplos positivos se solapan con los negativos** puesto que se encuentran en subintervalos de la clase mayoritaria. Esta característica puede dificultar enormemente el entrenamiento de modelos predictivos puesto que no resulta sencillo diferenciar las muestras que pertenecen a cada clase. 
+
+```{r}
+# Diagrama de cajas por atributo y clase
+featurePlot(x=x, y=y, plot="box")
+```
+Para finalizar este primer ejercicio procedemos a entrenar varios modelos predictivos con diversas configuraciones para comparar el comportamiento en cada una de ellas. En particular, vamos a utilizar el algoritmo *K Nearest Neighbors* (KNN) con tres metodologías:
+
+1. Utilizando el **conjunto de datos original sin balancear** las clases.
+2. Aplicando **técnicas de *undersampling* y *oversampling* aleatorio** para balancear las clases.
+3. Aplicando el **algoritmo *SMOTE* ** para generar muestras sintéticas de la clase minoritaria.
+
+Comenzamos dividiendo el conjunto de datos original en un subconjunto de entrenamiento con un 75% del total y un subconjunto de test con el 25% restante. Como podemos observar en los siguientes resultados ambos conjuntos se siguen caracterizando por un fuerte desbalanceamiento de clases.
+
+```{r}
+# Establecemos una semilla para que los resultados sean reproducibles
+set.seed(42) 
+# Dividimos el dataset en entrenamiento (75%) y test
+trainIndex <- createDataPartition(subclus.df$Class, p=0.75, list=FALSE, times=1)
+subclus.train <- subclus.df[trainIndex,]
+subclus.test <- subclus.df[-trainIndex,]
+# Imbalance ratio para ambos datasets
+imbalanceRatio(subclus.train)
+summary(subclus.train$Class)
+imbalanceRatio(subclus.test)
+summary(subclus.test$Class)
+```
+A continuación definimos las dos funciones que nos permitirán entrenar y validar los modelos generados para cada una de las anteriores configuraciones. 
+
+```{r}
+# Función para entrenar un modelo con el algoritmo KNN, el dataset y la
+# configuración proporcionados
+learn_model <- function(dataset, ctrl, message) {
+  # Entrenamiento del modelo con centrado y escalado de los datos eligiendo
+  # el mejor valor del parámetro K en función de la curva ROC
+  model.fit <- train(Class ~ ., data = dataset, method = "knn", 
+                     trControl = ctrl, preProcess = c("center","scale"), 
+                     metric="ROC", tuneGrid = expand.grid(k = c(1,3,5,7,9,11)))
+  # Predicciones sobre el conjunto de entrenamiento
+  model.pred <- predict(model.fit, newdata=dataset)
+  # Matriz de confusión y curva ROC
+  model.cm <- confusionMatrix(model.pred, dataset$Class,positive = "positive")
+  model.probs <- predict(model.fit,newdata = dataset, type="prob")
+  model.roc <- roc(dataset$Class,model.probs[,"positive"],color="green")
+  return(model.fit)
+}
+
+# Función para evaluar un modelo previamente entrenado sobre el conjunto de
+# datos proporcionado
+test_model <- function(dataset, model.fit, message) {
+  # Predicciones sobre el conjunto de test
+  model.pred <- predict(model.fit, newdata = dataset)
+  # Matriz de confusión y curva ROC
+  model.cm <- confusionMatrix(model.pred, dataset$Class, positive = "positive")
+  print(model.cm)
+  model.probs <- predict(model.fit, newdata = dataset, type="prob")
+  model.roc <- roc(dataset$Class, model.probs[,"positive"])
+  plot(model.roc, type="S", print.thres= 0.5, main=c("ROC Test", message), col="blue")
+  return(model.cm)
+}
+```
+
+En este primer modelo se han utilizado las dos particiones anteriores para entrenamiento y test **sin ningún tipo de preprocesamiento**. Como podemos observar en el primer gráfico, parece que el **número óptimo de vecinos** a considerar en el algoritmo KNN se encuentra **entre 4 y 6** en caso de que queramos maximizar el área bajo la curva ROC. Por otro lado, si observamos las métricas de calidad del modelo podemos apreciar que ha conseguido una tasa de acierto del 89.93%. Sin embargo esta medida no es representativa puesto que el **clasificador está fuertemente sesgado por la clase mayoritaria**. Este hecho provoca que la métrica *sensitivity* no alcance el 60% de muestras positivas bien clasificadas puesto que la respuesta por defecto de este modelo es la clase negativa. Adicionalmente, el tercer gráfico muestra que el clasificador consigue un **área bajo la curva ROC del 58.3%**, lo que significa que no dispone de una buena capacidad de generalización.
+
+```{r}
+# Configuración de entrenamiento
+## Validación cruzada con 5 particiones durante 3 iteraciones
+ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, 
+                     classProbs=TRUE, summaryFunction=twoClassSummary)
+# Entrenamos el modelo con los datos sin balancear
+model.raw <- learn_model(subclus.train, ctrl, "RAW")
+# Graficamos los resultados del modelo
+plot(model.raw,main="Grid Search RAW")
+print(model.raw)
+cm.raw <- test_model(subclus.test, model.raw, "RAW")
+```
+
+A continuación **aplicamos *undersampling* aleatorio** para reducir el número de muestras de la clase negativa al número de ejemplares de la clase minoritaria. Como podemos observar en los siguientes resultados la **tasa de aciertos disminuye hasta un 84.56%**, equilibrando los valores de *sensitivity* y *specificity*. Adicionalmente, como consecuencia podemos observar un **considerable aumento del área bajo la curva ROC** hasta situarse en un 87.5%, lo cual nos indica que balancear las clases de la variable a predecir mediante *undersampling* aleatorio incrementa la capacidad de generalización del clasificador.
+
+```{r}
+# Configuración de entrenamiento
+## Validación cruzada con 5 particiones durante 3 iteraciones
+## Undersampling sobre la clase mayoritaria
+ctrl <- trainControl(method="repeatedcv", number=5, repeats = 3, 
+                     classProbs=TRUE, summaryFunction = twoClassSummary, 
+                     sampling = "down")
+# Entrenamos el modelo aplicando undersampling aleatorio
+model.us <- learn_model(subclus.train, ctrl, "US")
+# Evaluamos el modelo y representamos las métricas de calidad
+cm.us <- test_model(subclus.test, model.us, "US")
+```
+La técnica contraria a la anterior es **el *oversampling* aleatorio** que consiste en replicar muestras de la clase minoritaria hasta alcanzar el mismo número de ejemplares de la clase negativa. Con esta configuración la **tasa de aciertos para el tercer clasificador disminuye** aún más hasta situarse en un 81.88%. Parece lógico pensar que a mayor número de datos, mayor es la probabilidad de error al clasificar una muestra. Un aspecto destacable es su **100% de acierto al detectar las muestras negativas**. Este hecho solo se ha logrado con esta configuración al balancear el número de ejemplares de cada clase sin reducir la representación de la mayoritaria.
+
+```{r}
+# Configuración de entrenamiento
+## Validación cruzada con 5 particiones durante 3 iteraciones
+## Oversampling sobre la clase minoritaria
+ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, classProbs=TRUE, 
+                     summaryFunction=twoClassSummary, sampling="up")
+# Entrenamos el modelo aplicando oversampling aleatorio
+model.os <- learn_model(subclus.train, ctrl, "OS")
+# Evaluamos el modelo y representamos las métricas de calidad
+cm.os <- test_model(subclus.test, model.os, "OS")
+```
+Finalmente aplicamos **SMOTE** para balancear las clases generando muestras sintéticas con este algoritmo más sofisticado. Mediante este conjunto de entrenamiento se entrena un **cuarto modelo predictivo cuya tasa de acierto es de 85.91%**, la más alta conseguida hasta el momento. Este hecho nos indica que utilizar esta técnica para equilibrar el número de ejemplares de cada clase ha ayudado al clasificador a **distinguir mejor los dos tipos de clases** disponibles. De ese modo se disponen de valores considerablemente altos tanto para las métricas *sensivitiy* y *specificity*, como para el área bajo la curva ROC que se sitúa en un 91.7%.  
+
+```{r}
+# Configuración de entrenamiento
+## Validación cruzada con 5 particiones durante 3 iteraciones
+## Oversampling sobre la clase minoritaria
+ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, classProbs=TRUE,
+                     summaryFunction=twoClassSummary, sampling="smote")
+# Entrenamos el modelo aplicando oversampling aleatorio
+model.smt <- learn_model(subclus.train, ctrl, "SMT")
+# Evaluamos el modelo y representamos las métricas de calidad
+cm.smt <- test_model(subclus.test, model.smt, "SMT")
+```
+
