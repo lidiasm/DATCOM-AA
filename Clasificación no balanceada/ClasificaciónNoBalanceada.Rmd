@@ -6,8 +6,6 @@ output: pdf_document
 
 # Actividad 1
 
-*Repeat the whole procedure carried out with "circle" data using now the subclus problem. Please be sure to avoid unnecesary operations / R code chunks. Write a short comment on the main conclusions obtained throughout the experimental analysis. Focus on the most interesting behavior achieved by the methods applied, observing whether there are some special capabilities to be stressed by any particular approach.*
-
 En este primer ejercicio el objetivo consiste en replicar el análisis exploratorio ejemplificado en el guión de prácticas sobre el dataset `subclus`. Antes de comenzar, cargamos las librerías necesarias para tratar con este conjunto de datos.
 
 ```{r}
@@ -204,5 +202,74 @@ ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, classProbs=TRUE,
 model.smt <- learn_model(subclus.train, ctrl, "SMT")
 # Evaluamos el modelo y representamos las métricas de calidad
 cm.smt <- test_model(subclus.test, model.smt, "SMT")
+```
+
+Tras generar varios con diferentes configuraciones y métodos de preprocesamiento, a continuación se muestran diversos resúmenes de algunas de las métricas de calidad más relevantes para elegir el más adecuado a este problema. Según el **área bajo la curva ROC** el modelo que consigue el valor más alto es aquel en el que se ha usado SMOTE para balancear las clases de la variable a predecir. No obstante, observando la **métrica sensitivity** el clasificador que mejor predice la clase positiva es el relativo a la aplicación de *oversampling* para mejorar la representación de esta categoría. Sin embargo, no proporciona tan buenos resultados considerando únicamente la **medida specificity** puesto que en este caso es el modelo con los datos en bruto el que mejor consigue clasificar la etiqueta negativa que se corresponde con la clase mayoritaria. Si tuviésemos que decidirnos por un modelo en base a unas métrica de cierta calidad y con la capacidad de predecir la clase minoritaria, podríamos optar por el **tercer clasificador con oversampling** que ronda el 90% de curva ROC y maximiza los valores de la medida *sensitivity*.
+
+```{r}
+# Resumen tabular de los modelos
+models <- list(raw = model.raw,us = model.us,os = model.os,smt = model.smt)
+results <- resamples(models)
+summary(results)
+```
+
+A continuación se representa gráficamente el resumen mostrado anteriormente. En este tipo de visualizaciones es más sencillo analizar el comportamiento de los diferentes algoritmos de preprocesamiento en cada uno de los modelos entrenados. En el caso de **SMOTE podemos observar que existe una gran variabilidad de resultados para la métrica *sensitivity* **. Su rendimiento se puede ver afectado dependiendo de la calidad de las muestras positivas que haya generado para cada partición de la validación cruzada. Por otro lado, podemos apreciar que aplicar **oversampling y undersampling son beneficiosos para *sensitivity* ** puesto que sus resultados son muy similares. Y es que mientras que con la primera técnica se replican aquellos ejemplos más relevantes ganando información para el modelo, con la segunda se pueden eliminar instancias ruidosas que ayuden a clarificar las fronteras entre sendas clases.
+
+```{r}
+# Representación del resumen estadístico anterior de los cuatro modelos
+bwplot(results)
+```
+
+En este último gráfico se encuentran representadas las medidas anteriores y una nueva denominada *F1* que demuestra el equilibrio entre la precisión y el número de muestras positivas bien clasificadas. Mientras que en las restantes métrica los modelos presentan un mayor número de diferencias, en esta medida podemos observar que se encuentran en valores muy similares siendo SMOTE el que dispone del mayor valor. Esta teoría indica que el algoritmo de preprocesamiento **SMOTE consigue un buen porcentaje de acierto a la vez que clasifica correctamente el mayor número de muestras de la clase positiva**. 
+
+```{r}
+# Comparativa de medidas de calidad para todos los modelos
+comparison <- data.frame(model = names(models),
+                         Sensitivity = rep(NA, length(models)),
+                         Specificity = rep(NA, length(models)),
+                         Precision = rep(NA, length(models)),
+                         F1 = rep(NA, length(models)))
+# Representación gráfica de la comparativa
+for (name in names(models)) {
+  cm_model <- get(paste0("cm.", name))
+  comparison[comparison$model == name, ] <- filter(comparison, model == name) %>%
+    mutate(Sensitivity = cm_model$byClass["Sensitivity"],
+           Specificity = cm_model$byClass["Specificity"],
+           Precision = cm_model$byClass["Precision"],
+           F1 = cm_model$byClass["F1"])
+}
+comparison %>%
+  gather(x, y, Sensitivity:F1) %>%
+  ggplot(aes(x = x, y = y, color = model)) +
+  geom_jitter(width = 0.2, alpha = 0.5, size = 3)
+```
+
+
+# Actividad 2
+
+En este segundo ejercicio se pretende aplicar diferentes algoritmos de la familia SMOTE para conocer qué rasgos característicos presentan sus comportamientos frente a diversos conjuntos de datos. En mi caso se han seleccionado los cuatro siguientes:
+
+* **SMOTE**. Se trata de algoritmo original que consigue aumentar el número de muestras de la clase minoritaria a través de la interpolación de ejemplares que componen un vecindario con K participantes.
+
+* **ANSMOTE**. El algoritmo *Adaptive Neighbor SMOTE* es una variante de la técnica anterior en la que se **calcula el número de vecinos** a considerar para cada una de las muestras de la clase minoritaria automáticamente.
+
+* **DBSMOTE**. Esta tercera variante conocida como *Density-based SMOTE* utiliza **técnicas de clustering** para agrupar las muestras de la clase minoritaria con las que generar los ejemplos sintéticos a partir de las distancias entre las originales. 
+
+* **SLMOTE**. El último algoritmo de la familia SMOTE es capaz de definir una especie de *área segura* en la que situar las muestras sintéticas de la clase minoritaria de modo que no se encuentren cerca de ejemplares de la etiqueta mayoritaria y así no provocar errores de clasificación.
+
+```{r}
+# Cargamos los cuatro datasets con los que se van a realizar los experimentos
+data("ecoli1")
+data("glass0")
+data("haberman")
+data("yeast4")
+# Generamos los diferentes conjuntos de datos con los diversos algoritmos SMOTE
+# y entrenamos un modelo por cada uno de ellos
+
+# Entrenamiento de modelos
+# ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, classProbs=TRUE,
+#                      summaryFunction=twoClassSummary, sampling="smote")
+# model.smt <- learn_model(subclus.train, ctrl, "SMT")
+# cm.smt <- test_model(subclus.test, model.smt, "SMT")
 ```
 
