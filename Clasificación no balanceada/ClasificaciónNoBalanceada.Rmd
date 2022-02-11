@@ -6,7 +6,7 @@ output: pdf_document
 
 # Actividad 1
 
-En este primer ejercicio el objetivo consiste en replicar el análisis exploratorio ejemplificado en el guión de prácticas sobre el dataset `subclus`. Antes de comenzar, cargamos las librerías necesarias para tratar con este conjunto de datos.
+En este primer ejercicio el objetivo consiste en replicar el análisis exploratorio ejemplificado en el guión de prácticas sobre el dataset *subclus*. Antes de comenzar, cargamos las librerías necesarias para tratar con este conjunto de datos.
 
 ```{r}
 # Cargamos las librerías necesarias para este proyecto
@@ -15,6 +15,9 @@ library(imbalance)
 library(dplyr)
 library(pROC)
 library(tidyr)
+# Establecemos una semilla general para que los resultados sean reproducibles
+# en el caso de los métodos aleatorios
+set.seed(42)
 ```
 
 Como podemos apreciar en los siguientes resultados, este dataset cuenta con **599 registros y 3 variables**, dos independientes de tipo entero y una columna categórica compuesta por dos valores nomianles: las clases `negative` y `positive`. 
@@ -35,7 +38,7 @@ head(subclus.df)
 # Clases 
 levels(subclus.df$Class)
 ```
-A continuación podemos apreciar el resumen estadístico del conjunto de datos `subclus` que muestra las medidas estadísticas más comunes para las variables numéricas y el número de ejemplares para cada clase en el caso de las variables categóricas. 
+A continuación podemos apreciar el resumen estadístico del conjunto de datos *subclus* que muestra las medidas estadísticas más comunes para las variables numéricas y el número de ejemplares para cada clase en el caso de las variables categóricas. 
 
 El **atributo `Att1` dispone de una media y mediana muy similares** lo que significa que no existe prácticamente diferencias entre el valor medio y la media de todos sus valores. Si observamos los cuartiles, podemos visualizar que existe una **amplia diversidad de datos** tanto en el primer intervalo compuesto por el mínimo y el primer cuartil, como en el segundo entre el primer cuartil y el segundo cuartil o mediana. No obstante, esta tendencia no ocurre en el tercer intervalo entre la mediana y el tercer cuartil puesto que la diferencia entre sus valores es considerablemente menor que en los casos anteriores.
 
@@ -62,6 +65,7 @@ for(i in 1:2) {
   boxplot(x[,i], main=names(subclus.df)[i])
 }
 ```
+
 En este segundo gráfico se representa el **desbalanceamiento de las clases** de la variable dependiente mediante los porcentajes de muestras asociados. Como se anticipó anteriormente, el número de ejemplos de la clase positiva apenas alcanza un 16% del total del dataset.
 
 ```{r}
@@ -92,6 +96,7 @@ En el siguiente gráfico se representan los diagramas de cajas relativos a cada 
 # Diagrama de cajas por atributo y clase
 featurePlot(x=x, y=y, plot="box")
 ```
+
 Para finalizar este primer ejercicio procedemos a entrenar varios modelos predictivos con diversas configuraciones para comparar el comportamiento en cada una de ellas. En particular, vamos a utilizar el algoritmo *K Nearest Neighbors* (KNN) con tres metodologías:
 
 1. Utilizando el **conjunto de datos original sin balancear** las clases.
@@ -101,8 +106,6 @@ Para finalizar este primer ejercicio procedemos a entrenar varios modelos predic
 Comenzamos dividiendo el conjunto de datos original en un subconjunto de entrenamiento con un 75% del total y un subconjunto de test con el 25% restante. Como podemos observar en los siguientes resultados ambos conjuntos se siguen caracterizando por un fuerte desbalanceamiento de clases.
 
 ```{r}
-# Establecemos una semilla para que los resultados sean reproducibles
-set.seed(42) 
 # Dividimos el dataset en entrenamiento (75%) y test
 trainIndex <- createDataPartition(subclus.df$Class, p=0.75, list=FALSE, times=1)
 subclus.train <- subclus.df[trainIndex,]
@@ -129,7 +132,7 @@ learn_model <- function(dataset, ctrl, message) {
   # Matriz de confusión y curva ROC
   model.cm <- confusionMatrix(model.pred, dataset$Class,positive = "positive")
   model.probs <- predict(model.fit,newdata = dataset, type="prob")
-  model.roc <- roc(dataset$Class,model.probs[,"positive"],color="green")
+  model.roc <- roc(dataset$Class,model.probs[,"positive"], color="green")
   return(model.fit)
 }
 
@@ -177,7 +180,8 @@ model.us <- learn_model(subclus.train, ctrl, "US")
 # Evaluamos el modelo y representamos las métricas de calidad
 cm.us <- test_model(subclus.test, model.us, "US")
 ```
-La técnica contraria a la anterior es **el *oversampling* aleatorio** que consiste en replicar muestras de la clase minoritaria hasta alcanzar el mismo número de ejemplares de la clase negativa. Con esta configuración la **tasa de aciertos para el tercer clasificador disminuye** aún más hasta situarse en un 81.88%. Parece lógico pensar que a mayor número de datos, mayor es la probabilidad de error al clasificar una muestra. Un aspecto destacable es su **100% de acierto al detectar las muestras negativas**. Este hecho solo se ha logrado con esta configuración al balancear el número de ejemplares de cada clase sin reducir la representación de la mayoritaria.
+
+La técnica contraria a la anterior es **el *oversampling* aleatorio** que consiste en replicar muestras de la clase minoritaria hasta alcanzar el mismo número de ejemplares de la clase negativa. Con esta configuración la **tasa de aciertos para el tercer clasificador disminuye** aún más hasta situarse en un 81.88%. Parece lógico pensar que a mayor número de datos, mayor es la probabilidad de error al clasificar una muestra. Un aspecto destacable es su **100% de acierto al detectar las muestras negativas**. Este hecho solo se ha logrado con esta configuración al balancear el número de ejemplares de cada clase sin reducir la representación de la categoría mayoritaria.
 
 ```{r}
 # Configuración de entrenamiento
@@ -190,7 +194,8 @@ model.os <- learn_model(subclus.train, ctrl, "OS")
 # Evaluamos el modelo y representamos las métricas de calidad
 cm.os <- test_model(subclus.test, model.os, "OS")
 ```
-Finalmente aplicamos **SMOTE** para balancear las clases generando muestras sintéticas con este algoritmo más sofisticado. Mediante este conjunto de entrenamiento se entrena un **cuarto modelo predictivo cuya tasa de acierto es de 85.91%**, la más alta conseguida hasta el momento. Este hecho nos indica que utilizar esta técnica para equilibrar el número de ejemplares de cada clase ha ayudado al clasificador a **distinguir mejor los dos tipos de clases** disponibles. De ese modo se disponen de valores considerablemente altos tanto para las métricas *sensivitiy* y *specificity*, como para el área bajo la curva ROC que se sitúa en un 91.7%.  
+
+Finalmente aplicamos **SMOTE** para balancear las clases generando muestras sintéticas con este algoritmo más sofisticado. Mediante este conjunto de entrenamiento se entrena un **cuarto modelo predictivo cuya tasa de acierto es de 85.91%**, la más alta conseguida hasta el momento. Este hecho nos indica que utilizar esta técnica para equilibrar el número de ejemplares de cada categoría ha ayudado al clasificador a **distinguir mejor los dos tipos de clases** disponibles. De ese modo se disponen de valores considerablemente altos tanto para las métricas *sensivitiy* y *specificity*, como para el área bajo la curva ROC que se sitúa en un 91.7%.  
 
 ```{r}
 # Configuración de entrenamiento
@@ -204,7 +209,7 @@ model.smt <- learn_model(subclus.train, ctrl, "SMT")
 cm.smt <- test_model(subclus.test, model.smt, "SMT")
 ```
 
-Tras generar varios con diferentes configuraciones y métodos de preprocesamiento, a continuación se muestran diversos resúmenes de algunas de las métricas de calidad más relevantes para elegir el más adecuado a este problema. Según el **área bajo la curva ROC** el modelo que consigue el valor más alto es aquel en el que se ha usado SMOTE para balancear las clases de la variable a predecir. No obstante, observando la **métrica sensitivity** el clasificador que mejor predice la clase positiva es el relativo a la aplicación de *oversampling* para mejorar la representación de esta categoría. Sin embargo, no proporciona tan buenos resultados considerando únicamente la **medida specificity** puesto que en este caso es el modelo con los datos en bruto el que mejor consigue clasificar la etiqueta negativa que se corresponde con la clase mayoritaria. Si tuviésemos que decidirnos por un modelo en base a unas métrica de cierta calidad y con la capacidad de predecir la clase minoritaria, podríamos optar por el **tercer clasificador con oversampling** que ronda el 90% de curva ROC y maximiza los valores de la medida *sensitivity*.
+Tras generar modelos varios con diferentes configuraciones y métodos de preprocesamiento, a continuación se muestran algunos resúmenes de las métricas de calidad más relevantes para elegir el más adecuado a este problema. Según el **área bajo la curva ROC** el modelo que consigue el valor más alto es aquel en el que se ha usado SMOTE para balancear las clases de la variable a predecir. No obstante, observando la **métrica sensitivity** el clasificador que mejor predice la clase positiva es el relativo a la aplicación de *oversampling* que aumenta la representación de esta categoría sin disminuir la relativa a la categoría mayoritaria. Sin embargo, no proporciona tan buenos resultados considerando únicamente la **medida specificity** puesto que en este caso es el modelo con los datos en bruto el que mejor consigue clasificar la etiqueta negativa que se corresponde con la clase mayoritaria. Si tuviésemos que seleccionar un modelo en base a estas métricas de calidad, maximizandon la capacidad de predecir la clase minoritaria, podríamos optar por el **tercer clasificador con oversampling** que ronda un área ROC del 90% y contiene los valores más elevados de la medida *sensitivity*.
 
 ```{r}
 # Resumen tabular de los modelos
@@ -213,14 +218,14 @@ results <- resamples(models)
 summary(results)
 ```
 
-A continuación se representa gráficamente el resumen mostrado anteriormente. En este tipo de visualizaciones es más sencillo analizar el comportamiento de los diferentes algoritmos de preprocesamiento en cada uno de los modelos entrenados. En el caso de **SMOTE podemos observar que existe una gran variabilidad de resultados para la métrica *sensitivity* **. Su rendimiento se puede ver afectado dependiendo de la calidad de las muestras positivas que haya generado para cada partición de la validación cruzada. Por otro lado, podemos apreciar que aplicar **oversampling y undersampling son beneficiosos para *sensitivity* ** puesto que sus resultados son muy similares. Y es que mientras que con la primera técnica se replican aquellos ejemplos más relevantes ganando información para el modelo, con la segunda se pueden eliminar instancias ruidosas que ayuden a clarificar las fronteras entre sendas clases.
+A continuación se representa gráficamente el resumen mostrado anteriormente. En este tipo de visualizaciones es más sencillo analizar el comportamiento de los diferentes algoritmos de preprocesamiento en cada uno de los modelos entrenados. En el caso de **SMOTE podemos observar que existe una gran variabilidad de resultados para la métrica *sensitivity*.** Su rendimiento se puede ver afectado dependiendo de la calidad de las muestras positivas que haya generado para cada partición de la validación cruzada. Por otro lado, podemos apreciar que aplicar **oversampling y undersampling son beneficiosos para *sensitivity* ** puesto que sus resultados son muy similares. Y es que mientras que con la primera técnica se replican aquellos ejemplos más relevantes ganando información para el modelo, con la segunda se pueden eliminar instancias ruidosas que ayuden a clarificar las fronteras entre sendas categorías
 
 ```{r}
 # Representación del resumen estadístico anterior de los cuatro modelos
 bwplot(results)
 ```
 
-En este último gráfico se encuentran representadas las medidas anteriores y una nueva denominada *F1* que demuestra el equilibrio entre la precisión y el número de muestras positivas bien clasificadas. Mientras que en las restantes métrica los modelos presentan un mayor número de diferencias, en esta medida podemos observar que se encuentran en valores muy similares siendo SMOTE el que dispone del mayor valor. Esta teoría indica que el algoritmo de preprocesamiento **SMOTE consigue un buen porcentaje de acierto a la vez que clasifica correctamente el mayor número de muestras de la clase positiva**. 
+En este último gráfico se encuentran representadas las medidas anteriores y una nueva denominada *F1* que demuestra el equilibrio entre la precisión y el número de muestras positivas bien clasificadas. Mientras que en las restantes métricas los modelos presentan un mayor número de diferencias, en esta medida podemos observar que se disponen de valores muy similares siendo SMOTE el de mayor valor. Esta teoría indica que el algoritmo de preprocesamiento **SMOTE consigue un buen porcentaje de acierto a la vez que clasifica correctamente el mayor número de muestras de la clase positiva**. 
 
 ```{r}
 # Comparativa de medidas de calidad para todos los modelos
@@ -249,7 +254,7 @@ comparison %>%
 
 En este segundo ejercicio se pretende aplicar diferentes algoritmos de la familia SMOTE para conocer qué rasgos característicos presentan sus comportamientos frente a diversos conjuntos de datos. En mi caso se han seleccionado los cuatro siguientes:
 
-* **SMOTE**. Se trata de algoritmo original que consigue aumentar el número de muestras de la clase minoritaria a través de la interpolación de ejemplares que componen un vecindario con K participantes.
+* **SMOTE**. Se trata de algoritmo original que consigue aumentar el número de muestras de la clase minoritaria a través de la interpolación de ejemplares que componen un vecindario con *K* participantes.
 
 * **ANSMOTE**. El algoritmo *Adaptive Neighbor SMOTE* es una variante de la técnica anterior en la que se **calcula el número de vecinos** a considerar para cada una de las muestras de la clase minoritaria automáticamente.
 
@@ -257,19 +262,174 @@ En este segundo ejercicio se pretende aplicar diferentes algoritmos de la famili
 
 * **SLMOTE**. El último algoritmo de la familia SMOTE es capaz de definir una especie de *área segura* en la que situar las muestras sintéticas de la clase minoritaria de modo que no se encuentren cerca de ejemplares de la etiqueta mayoritaria y así no provocar errores de clasificación.
 
+A continuación se muestra el número de ejemplos de cada categoría para cada uno de los cuatro datasets considerados junto a la métrica *imbalance ratio*. Mientras que el último dataset *yeast4* es el que dispone de un menor valor por su alta concentración de muestras negativas con respecto a las positivas, el segundo conjunto de datos es el más balanceado puesto que dispone de un menor número de muestras tanto a nivel general. 
+
 ```{r}
 # Cargamos los cuatro datasets con los que se van a realizar los experimentos
+# y visualizamos el balanceado de sus clases
 data("ecoli1")
+summary(ecoli1$Class)
+imbalanceRatio(ecoli1)
 data("glass0")
+summary(glass0$Class)
+imbalanceRatio(glass0)
 data("haberman")
+summary(haberman$Class)
+imbalanceRatio(haberman)
 data("yeast4")
-# Generamos los diferentes conjuntos de datos con los diversos algoritmos SMOTE
-# y entrenamos un modelo por cada uno de ellos
+summary(yeast4$Class)
+imbalanceRatio(yeast4)
+```
 
-# Entrenamiento de modelos
-# ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, classProbs=TRUE,
-#                      summaryFunction=twoClassSummary, sampling="smote")
-# model.smt <- learn_model(subclus.train, ctrl, "SMT")
-# cm.smt <- test_model(subclus.test, model.smt, "SMT")
+En primer lugar vamos a generar cuatro modelos, uno por cada dataset, utilizando las funciones de entrenamiento y validación del ejercicio anterior **sin balancear las clases**. Como podemos observar en el siguiente gráfico que representa las principales métricas de calidad, **los dos primeros clasificadores consiguen resultados medianamente razonables** en cuanto a la clasificación de la clase positiva puesto que sus valores de *sensivity* no son demasiado bajos. Sin embargo, esta situación no ocurre para los dos últimos conjuntos de datos cuyo **desbalanceo influye de manera considerablemente negativa** en sus respectivos modelos ya que esta métrica se encuentra en el rango inferior de valores. Ambos hechos pueden anticipar que será más complicado obtener clasificadores con buenas capacidades de generalización para los datasets *haberman* y *yeast4*.
+
+```{r message=FALSE, warning=FALSE}
+#### ECOLI DATASET
+# Clase positiva al principio
+ecoli1$Class <- relevel(ecoli1$Class,"positive")
+# Dividimos el dataset en entrenamiento (75%) y test
+trainIndex <- createDataPartition(ecoli1$Class, p=0.75, list=FALSE, times=1)
+ecoli.train <- ecoli1[trainIndex,] 
+# Entrenamos un modelo con KNN y el dataset balanceado
+## Validación cruzada con 5 particiones y 3 iteraciones
+## Eliminamos la variable `Chg` por tener varianza 0
+ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, 
+                   classProbs=TRUE, summaryFunction=twoClassSummary)
+raw.ecoli.model <- learn_model(ecoli.train %>% select(-Chg), ctrl, method)
+
+#### GLASS DATASET
+# Clase positiva al principio
+glass0$Class <- relevel(glass0$Class,"positive")
+# Dividimos el dataset en entrenamiento (75%) y test
+trainIndex <- createDataPartition(glass0$Class, p=0.75, list=FALSE, times=1)
+glass.train <- glass0[trainIndex,] 
+# Entrenamos un modelo con KNN y el dataset balanceado
+## Validación cruzada con 5 particiones y 3 iteraciones
+ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, 
+                   classProbs=TRUE, summaryFunction=twoClassSummary)
+raw.glass.model <- learn_model(glass.train, ctrl, method)
+
+#### HABERMAN DATASET
+# Clase positiva al principio
+haberman$Class <- relevel(haberman$Class,"positive")
+# Dividimos el dataset en entrenamiento (75%) y test
+trainIndex <- createDataPartition(haberman$Class, p=0.75, list=FALSE, times=1)
+haberman.train <- haberman[trainIndex,] 
+# Entrenamos un modelo con KNN y el dataset balanceado
+## Validación cruzada con 5 particiones y 3 iteraciones
+ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, 
+                   classProbs=TRUE, summaryFunction=twoClassSummary)
+raw.haberman.model <- learn_model(haberman.train, ctrl, method)
+
+#### YEAST DATASET
+# Clase positiva al principio
+yeast4$Class <- relevel(yeast4$Class,"positive")
+# Dividimos el dataset en entrenamiento (75%) y test
+trainIndex <- createDataPartition(yeast4$Class, p=0.75, list=FALSE, times=1)
+yeast.train <- yeast4[trainIndex,] 
+# Entrenamos un modelo con KNN y el dataset balanceado
+## Validación cruzada con 5 particiones y 3 iteraciones
+ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, 
+                   classProbs=TRUE, summaryFunction=twoClassSummary)
+raw.yeast.model <- learn_model(yeast.train, ctrl, method)
+
+# Introducimos los modelos en una lista
+raw.models <- list(ecoli.raw=raw.ecoli.model, glass.raw=raw.glass.model,
+               haberman.raw=raw.haberman.model, yeast.raw=raw.yeast.model)
+# Representamos los resultados gráficamente
+raw.results <- resamples(raw.models)
+bwplot(raw.results)
+```
+
+A continuación procedemos a aplicar cada una de las variantes del algoritmo *SMOTE* sobre los cuatro datasets considerados para comparar su comportamiento sobre un clasificador entrenado mediante la técnica KNN. Para facilitar el proceso se ha implementado la función `balance_and_train` que integra tanto el proceso de balanceamiento de las clases a predecir como el entrenamiento del clasificador con cada uno de los conjuntos de datos resultantes, dado un dataset inicial y un ratio que indica la proporción a considerar para equilibrar el número de muestras de cada categoría.
+
+```{r}
+balance_and_train <- function(dataset, ratio) {
+  # Lista para almacenar los modelos entrenados
+  model.list <- list()
+  # Convertimos las columnas a numéricas para aplicar SMOTE
+  num.dataset <- data.frame(sapply(1:ncol(dataset), 
+                                 function(x) as.numeric(dataset[, x])))
+  # Reasignamos los nombres de las columnas al dataset resultante
+  colnames(num.dataset) <- colnames(dataset)
+  # Aplicamos los diferentes algoritmos SMOTE para entrenar un
+  # modelo con cada uno
+  for (method in c("SMOTE", "ANSMOTE", "DBSMOTE", "SLMOTE")) {
+    # Balancemos las clases con el algoritmo especificado
+    balanced.dataset <- oversample(num.dataset, ratio=ratio, method=method)
+    # Reetiquetamos las clases con los valores originales "positive"/"negative"
+    balanced.dataset$Class <- as.factor(sapply(1:nrow(balanced.dataset), 
+     function(x) ifelse(balanced.dataset$Class[x]==1, "negative", "positive")))
+    # Mostramos el resultado del dataset balanceado
+    cat(summary(balanced.dataset$Class), "\n", 
+        imbalanceRatio(balanced.dataset), "\n")
+    # Entrenamos un modelo con KNN y el dataset resultante
+    # usando validación cruzada con 5 particiones y 3 iteraciones
+    ctrl <- trainControl(method="repeatedcv", number=5, repeats=3, 
+                   classProbs=TRUE, summaryFunction=twoClassSummary)
+    knn.model <- learn_model(balanced.dataset, ctrl, method)
+    # Almacenamos cada modelo en la lista
+    model.list[[method]] <- knn.model
+  }
+  return (model.list)
+}
+```
+
+Para el conjunto de datos *ecoli1* podemos observar en el siguiente gráfico que existe una mayor variabilidad de resultados para las tres métricas de calidad consideradas, si lo comparamos con la representación anterior de los clasificadores sobre el dataset original. Estas diferencias pueden estar asociadas a las diversas particiones que realiza la validación cruzada en cada una de las iteraciones. Así, la teoría más plausible que explica este hecho es que un clasificador entrenado con el **algoritmo KNN se encuentra influenciado por el número de muestras reales y sintéticas** que componen el dataset que se utiliza para su entrenamiento. Otro aspecto común a todas las variantes de la técnica *SMOTE* es el impacto que supone la **reducción del número de muestras negativas**, siendo bastante acusado en el caso del algoritmo original puesto que su respectiva caja se encuentra dentro de la primera mitad del intervalo. Al eliminar ejemplares de la clase mayoritaria, esta también pierde parte de su representatividad.
+
+De las cuatro variantes consideradas parece que es **ANSMOTE la que presenta un comportamiento más estable** en las tres medidas de calidad por la menor longitud de sus cajas y sus posiciones razonablemente cercanas al último intervalo de valores más altos. Esto nos indica que para el conjunto de datos particular *ecoli1* y para la generación de clasificadores mediante el algoritmo KNN, esta técnica resulta beneficiosa para aumentar la capacidad de predicción considerando un número de vecinos particular a cada una de las muestras de la clase minoritaria para generar los ejemplares sintéticos.
+
+```{r}
+# Modelos para el dataset ECOLI
+## Eliminamos la variable `Chg` por tener varianza 0
+## Bajamos la proporción a 0.7 para que haya suficiente número de muestras 
+## con las que equilibrar el dataset para todas las variantes de SMOTE.
+ecoli.models <- balance_and_train(ecoli.train %>% select(-Chg), 0.7)
+# Representamos los resultados gráficamente
+ecoli.results <- resamples(ecoli.models)
+bwplot(ecoli.results)
+```
+
+En el segundo conjunto de datos *glass0* ha sido posible **aumentar la proporción de equilibrio entre ambas clases** para intentar alcanzar un 90% de balanceamiento en la variable dependiente. Con un 20% más de ratio podemos apreciar que la **clasificación de muestras negativas se ve considerablemente afectada** por una mayor variabilidad que en el caso anterior. Este hecho nos indica que al aumentar la representatividad de la clase minoritaria se ha perdido más cantidad de información de las muestras negativas, y por ende, se decrementa la capacidad de predicción del clasificador. A diferencia del dataset anterior, en este segundo experimento no existe una variante que cláramente proporcione mejores resultados en comparación con las restantes. Por un lado el algoritmo **SMOTE es capaz de conseguir una buena tasa de *sensitivity* ** mientras reduce la variabilidad sobre la medida *specificity*. Mientras que por otro lado **DBSMOTE presenta una mejor clasificaión de muestras positivas** a costa de una mayor variabilidad en la última métrica mencionada.
+
+```{r}
+# Modelos para el dataset GLASS
+glass.models <- balance_and_train(glass.train, 0.9)
+# Representamos los resultados gráficamente
+glass.results <- resamples(glass.models)
+bwplot(glass.results)
+```
+
+Como en el primer caso, el dataset *haberman* también se caracteriza por un **fuerte desbalanceamiento y como consecuencia no permite un ratio mayor del 60%** para comparar las variantes del algoritmo SMOTE bajo las mismas condiciones. Una consecuencia directa de esta restricción es apreciable en el siguiente gráfico en el que podemos visualizar cómo **empeora la clasificación de las muestras positivas** en comparación con los dos casos anteriores. En contraposición la métrica *specificity* dispone de una menor variabilidad con valores más altos para todas las variantes consideradas. Si nuestro objetivo es **maximizar el número de aciertos de la clase positiva**, para este conjunto de datos parece que **SLMOTE es la variante que proporciona mejores resultados** a la vez que mantiene una buena capacidad de generalización sobre la clase mayoritaria.
+
+```{r}
+# Modelos para el dataset HABERMAN
+haberman.models <- balance_and_train(haberman.train, 0.6)
+# Representamos los resultados gráficamente
+haberman.results <- resamples(haberman.models)
+bwplot(haberman.results)
+```
+
+El cuarto dataset *yeast* es el que presenta un **mayor desbalanceamiento** de entre los conjuntos de datos considerados. Por ello, al igual que en el caso anterior, **no se ha podido conseguir un ratio mayor del 50%** para entrenar un clasificador por cada variante del algoritmo SMOTE. No obstante, esta limitación parece **no haber afectado a la capacidad de predicción de la clase positiva** puesto que observando el gráfico podemos notar que en la mayoría de los modelos el porcentaje de clasificación es bastante alto. Sin embargo, esta característica parece haber **influido sobre la predicción de las muestras negativas, siendo especialmente inferiores en el algoritmo SMOTE y su variante ANSMOTE**. Si intentamos equilibrar la capacidad de generalización para ambas categorías, es la variante DSBMOTE la que mejores resultados proporciona en la mayoría de casos y en base a las tres métricas estudiadas. En este conjunto de datos parece que las técnicas de *clustering* son beneficiosas para tratar de identificar y generar muestras sintéticas de la clase minoritaria con las que aprender sus respectivos patrones.
+
+```{r}
+# Modelos para el dataset YEAST
+yeast.models <- balance_and_train(yeast.train, 0.5)
+# Representamos los resultados gráficamente
+yeast.results <- resamples(yeast.models)
+bwplot(yeast.results)
+```
+
+Finalmente procedemos a realizar una comparación entre los modelos generados con los conjuntos de datos originales y los clasificadores entrenados con los datasets balanceados con el algoritmo SMOTE original. Como podemos observar en la siguiente representación, los **resultados de los diferentes clasificadores dependen de los datasets** sobre los que se hayan entrenado. En particular, parece que el **conjunto de datos *yeast* es el más beneficiado de aplicar técnicas de balanceamiento de clases** como SMOTE para mejorar la capacidad de predicción del modelo sobre la clase minoritaria. En el resto de datasets podemos apreciar que disponen de valores similares sobre la curva ROC aunque presentan diferencias sustanciales en la medida *sensitivity*. Aquellos modelos entrenados con un **mayor número de ejemplares positivos disponen de una capacidad de predicción más alta** para las muestras de la clase minoritaria, mientras que los clasificadores entrenados con los conjuntos de datos originales disponen de valores considerablemente menores. Al realizar este experimento con diversos datasets y diferentes técnicas de balanceamiento de clases, podemos determinar que existe una relación directa entre la calidad de un clasificador y la representatividad de las clases que se pretenden predecir.
+
+```{r}
+# Modelos con el conjunto de datos sin preprocesar y preprocesado con SMOTE
+all.models <- c(raw.models)
+all.models[["ecoli.smote"]] <- ecoli.models$SMOTE
+all.models[["glass.smote"]] <- glass.models$SMOTE
+all.models[["haberman.smote"]] <- haberman.models$SMOTE
+all.models[["yeast.smote"]] <- yeast.models$SMOTE
+# Representamos las métricas de todos los modelos
+bwplot(resamples(all.models))
 ```
 
