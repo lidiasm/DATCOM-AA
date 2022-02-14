@@ -1,11 +1,11 @@
-########################## CLASIFICACIÓN ORDINAL ########################## 
+############################# CLASIFICACIÓN ORDINAL ############################# 
 ## Generalización del proceso de modelos múltiples
 # Cargamos las librerías necesarias para este trabajo
 library(tidyverse)
 library(RWeka)
 library(caret)
 # Establecemos una semilla para que los resultados sean reproducibles 
-set.seed(2022)
+set.seed(26)
 
 # Función que divide un dataset proporcionado en dos subconjuntos para el 
 # entrenamiento y testeo de modelos predictivos a partir del porcentaje proporcionado.
@@ -15,7 +15,6 @@ create_train_test <- function(dataset, class_index, perc) {
   names(dataset)[class_index] <- "target"
   # Dividimos el conjunto de datos según el porcentaje proporcionado
   train_index <- createDataPartition(dataset[, class_index], p=perc, list=FALSE)
-  # Retorna el conjunto de entrenamiento y de test
   return(list(train=dataset[train_index, ], test=dataset[-train_index, ]))
 }
 
@@ -54,13 +53,13 @@ ordinal_train <- function(dataset) {
 # procedentes de los K-1 problemas de clasificación binaria, junto al dataset
 # de test para calcular la probabilidad de cada muestra con respecto cada clase
 # y asignar la categoría cuya probabilidad sea máxima.
-ordinal_test <- function(models, dataset) {
+ordinal_test2 <- function(models, dataset) {
   # Eliminamos la variable dependiente del dataset
   test_dataset <- dataset %>% select(-target)
   # Calculamos la probabilidad de que sea la primera clase
   prob1 <- predict(models[[1]], test_dataset, type="prob")[,1]
   # Matriz para almacenar las probabilidades por muestra para cada clase
-  prob_matrix <- data.frame(matrix(0, ncol = 0, nrow = nrow(dataset)))
+  prob_matrix <- data.frame(matrix(0, ncol=0, nrow=nrow(dataset)))
   prob_matrix <- cbind(prob_matrix, prob1)
   # Calculamos las restantes probabilidades excepto la última para las clases
   # intermedias
@@ -74,12 +73,38 @@ ordinal_test <- function(models, dataset) {
   prob_matrix <- cbind(prob_matrix, probk)
   # Asignamos las clases de las muestras de test a partir de la probabilidad
   # máxima de cada clase
-  test_preds <- apply(prob_matrix, MARGIN = 1, 
+  test_preds <- apply(prob_matrix, MARGIN=1, 
                       function(x){dataset$target[which.max(x)]})
   return(test_preds)
 }
 
+ordinal_test <- function(models, dataset) {
+  # Obtenemos la lista de clases ordenada del dataset proporcionado
+  unique_classes <- as.integer(unique(dataset$target))
+  # Eliminamos la variable dependiente del dataset de test
+  test_dataset <- dataset %>% select(-target)
+  # Vector para almacenar las predicciones sobre test
+  preds <- c()
+  # Recorremos cada una de las muestras de test para elegir su clase
+  for (index_test in 1:nrow(test_dataset)) {
+    # Vector para almacenar las probabilidades de la muestra actual para cada clase
+    # Calculamos la probabilidad para la primera clase
+    probs <- c(predict(models[[1]], test_dataset[index_test, ], type="prob")[,1])
+    # Calculamos las probabilidades para las clases intermedias
+    for(i in 2:length(models)) {
+      probs <- c(probs, predict(models[[i-1]], test_dataset[index_test, ], type="prob")[,2] * 
+        predict(models[[i]], test_dataset[index_test, ], type="prob")[,1])
+    }
+    # Calculamos la probabilidad para la última clase
+    probs <- c(probs, predict(models[[length(models)]], test_dataset[index_test, ], type="prob")[,2])
+    # Seleccionamos la clase con mayor probabilidad y la asignamos a la muestra de test
+    preds <- c(preds, unique_classes[which(probs == max(probs))])
+  }
+  return (preds)
+}
+
 # Probamos la clasificación ordinal generalizada con todos los datasets disponibles
+# c("era.arff", "esl.arff", "lev.arff", "swd.arff")
 for (filename in c("era.arff", "esl.arff", "lev.arff", "swd.arff")) {
   print(filename)
   # Cargamos el dataset
