@@ -1,6 +1,0 @@
----
-title: "Clasificación Ordinal y Monotónica"
-author: "Lidia Sánchez Mérida"
-output: pdf_document
----
-
