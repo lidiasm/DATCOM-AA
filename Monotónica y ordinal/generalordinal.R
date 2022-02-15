@@ -1,5 +1,4 @@
 ############################# CLASIFICACIÓN ORDINAL ############################# 
-## Generalización del proceso de modelos múltiples
 # Cargamos las librerías necesarias para este trabajo
 library(tidyverse)
 library(RWeka)
@@ -53,31 +52,6 @@ ordinal_train <- function(dataset) {
 # procedentes de los K-1 problemas de clasificación binaria, junto al dataset
 # de test para calcular la probabilidad de cada muestra con respecto cada clase
 # y asignar la categoría cuya probabilidad sea máxima.
-ordinal_test2 <- function(models, dataset) {
-  # Eliminamos la variable dependiente del dataset
-  test_dataset <- dataset %>% select(-target)
-  # Calculamos la probabilidad de que sea la primera clase
-  prob1 <- predict(models[[1]], test_dataset, type="prob")[,1]
-  # Matriz para almacenar las probabilidades por muestra para cada clase
-  prob_matrix <- data.frame(matrix(0, ncol=0, nrow=nrow(dataset)))
-  prob_matrix <- cbind(prob_matrix, prob1)
-  # Calculamos las restantes probabilidades excepto la última para las clases
-  # intermedias
-  for(i in 2:length(models)) {
-    probi <- predict(models[[i-1]], test_dataset, type="prob")[,2] * 
-      predict(models[[i]], test_dataset, type="prob")[,1]
-    prob_matrix <- cbind(prob_matrix, probi)
-  }
-  # Calculamos la probabilidad con el último dataset
-  probk <- predict(models[[length(models)]], test_dataset, type="prob")[,2]
-  prob_matrix <- cbind(prob_matrix, probk)
-  # Asignamos las clases de las muestras de test a partir de la probabilidad
-  # máxima de cada clase
-  test_preds <- apply(prob_matrix, MARGIN=1, 
-                      function(x){dataset$target[which.max(x)]})
-  return(test_preds)
-}
-
 ordinal_test <- function(models, dataset) {
   # Obtenemos la lista de clases ordenada del dataset proporcionado
   unique_classes <- as.integer(unique(dataset$target))
