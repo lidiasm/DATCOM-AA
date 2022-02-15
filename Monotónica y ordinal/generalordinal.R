@@ -52,6 +52,7 @@ ordinal_train <- function(dataset) {
 # procedentes de los K-1 problemas de clasificación binaria, junto al dataset
 # de test para calcular la probabilidad de cada muestra con respecto cada clase
 # y asignar la categoría cuya probabilidad sea máxima.
+# Devuelve una lista con las predicciones sobre el conjunto de test.
 ordinal_test <- function(models, dataset) {
   # Obtenemos la lista de clases ordenada del dataset proporcionado
   unique_classes <- as.integer(unique(dataset$target))
@@ -65,10 +66,9 @@ ordinal_test <- function(models, dataset) {
     # Calculamos la probabilidad para la primera clase
     probs <- c(predict(models[[1]], test_dataset[index_test, ], type="prob")[,1])
     # Calculamos las probabilidades para las clases intermedias
-    for(i in 2:length(models)) {
-      probs <- c(probs, predict(models[[i-1]], test_dataset[index_test, ], type="prob")[,2] * 
-        predict(models[[i]], test_dataset[index_test, ], type="prob")[,1])
-    }
+    probs <- c(probs, sapply(2:length(models), function(x) 
+       predict(models[[x-1]], test_dataset[index_test, ], type="prob")[,2] * 
+        predict(models[[x]], test_dataset[index_test, ], type="prob")[,1]))
     # Calculamos la probabilidad para la última clase
     probs <- c(probs, predict(models[[length(models)]], test_dataset[index_test, ], type="prob")[,2])
     # Seleccionamos la clase con mayor probabilidad y la asignamos a la muestra de test
@@ -78,7 +78,6 @@ ordinal_test <- function(models, dataset) {
 }
 
 # Probamos la clasificación ordinal generalizada con todos los datasets disponibles
-# c("era.arff", "esl.arff", "lev.arff", "swd.arff")
 for (filename in c("era.arff", "esl.arff", "lev.arff", "swd.arff")) {
   print(filename)
   # Cargamos el dataset
