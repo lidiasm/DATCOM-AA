@@ -72,11 +72,14 @@ monotonic_test <- function(models, dataset) {
 
 # Probamos la clasificación ordinal generalizada con todos los datasets disponibles
 for (filename in c("era.arff", "esl.arff", "lev.arff", "swd.arff")) {
-  print(filename)
+  cat("\n", filename, "\n")
   # Cargamos el dataset
   df <- read.arff(filename)
   # Ordenamos el dataset según las clases
   df <- df[order(df[, ncol(df)]), ]
+  # Resumen de las dimensiones y el balanceamiento de las clases
+  print(dim(df))
+  print(summary(as.factor(df[, ncol(df)])))
   # Generamos un conjunto de entrenamiento y otro de test
   df.partitions <- create_train_test(df, ncol(df), 0.75)
   # Generamos K-1 problemas de clasificación binaria con el conjunto de entrenamiento
@@ -85,5 +88,14 @@ for (filename in c("era.arff", "esl.arff", "lev.arff", "swd.arff")) {
   # formulación de la diapositiva 92
   df.test_preds <- monotonic_test(df.models, df.partitions$test)
   # Porcentaje de precisión
+  # En comparación con la clasificación monotónica generalizada podemos observar en estos
+  # resultados un considerable empeoramiento de la tasa de aciertos para la gran mayoría
+  # de conjuntos. No obstante, este decremento de la métrica accuracy es una de las consecuencias
+  # que se pueden manifestar en la imposición de la restricción de monotonía sobre los
+  # clasificadores. La excepción a esta regla la podemos encontrar en el dataset `esl` que
+  # ha conseguido aumentar la tasa de precisión en más de un 40%. Este conjunto de datos dispone
+  # de hasta un 50% menos de registros y, por ende, parece que ha sufrido menos underfitting
+  # aplicando el algoritmo XGBoost que los restantes datasets en los cuales los clasificadores
+  # no han terminado de aprender correctamente los patrones de las diferentes clases.
   print(sum(df.test_preds==df.partitions$test$target)/length(df.partitions$test$target))
 }
