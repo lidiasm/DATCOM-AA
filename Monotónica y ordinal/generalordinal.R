@@ -84,6 +84,8 @@ for (filename in c("era.arff", "esl.arff", "lev.arff", "swd.arff")) {
   df <- read.arff(filename)
   # Ordenamos el dataset según las clases
   df <- df[order(df[, ncol(df)]), ]
+  # Resumen del balanceamiento de las clases
+  print(summary(as.factor(df[, ncol(df)])))
   # Generamos un conjunto de entrenamiento y otro de test
   df.partitions <- create_train_test(df, ncol(df), 0.75)
   # Generamos K-1 problemas de clasificación binaria con el conjunto de entrenamiento
@@ -91,6 +93,14 @@ for (filename in c("era.arff", "esl.arff", "lev.arff", "swd.arff")) {
   # Evaluamos los modelos conseguidos calculando las probabilidades y seleccionando
   # la clase de la mayor
   df.test_preds <- ordinal_test(df.models, df.partitions$test)
-  # Porcentaje de precisión
+  # Calculamos el porcentaje de precisión
+  # Como podemos apreciar en los resultados, en los dos primeros datasets la tasa de
+  # aciertos apenas alcanza un 20% mientras que en los dos restantes sí se alcanzan
+  # porcentajes más elevados en torno al 64% y 55%. Una de las principales razones 
+  # explicativas de este fenómeno puede residir en que estos dos últimos conjuntos
+  # disponen de una menor cantidad de clases y por lo tanto parece facilitar el aprendizaje
+  # de sus patrones. En contraposición se encuentran los conjuntos `era` y `esl` con
+  # 9 clases cada uno, lo que conlleva una descomposición de una mayor cantidad de problemas
+  # binarios de clasificación y un incremento en la probabilidad de cometer errores.
   print(sum(df.test_preds==df.partitions$test$target)/length(df.partitions$test$target))
 }
