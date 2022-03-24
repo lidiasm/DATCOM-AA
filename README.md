@@ -5,3 +5,5 @@
 1. **Clasificación no balanceada**. En la carpeta *No balanceada* se encuentran los ejercicios relativos a la clasificación de conjuntos no balanceados y a la aplicación y comparación de diversas técnicas que generan muestras sintéticas para equilibrar el número de muestras de cada categoría.
 
 2. **Clasificación ordinal y monotónica**. En la carpeta *Monotónica y ordinal* se encuentran las implementaciones de ambos tipos de clasificación a partir de su transformación en *K* problemas de clasificación binarios, aplicando un modelo en cascada para el primer caso con el que calcular las probabilidades de pertenencia de cada clase, mientras que para problemas monotónicos se utiliza el enfoque *Monotone Split Constraint* empleando el algoritmo *XGBoost*.
+
+3. **Clasificación de imágenes**. En la carpeta *Deep Learning* se sitúan los *notebooks* y *scripts* que contienen los diferentes experimentos realizados utilizando distintas arquitecturas de Redes Neuronales Convolutivas y técnicas de pre-procesamiento de imágenes. El objetivo consiste en resolver una competición de *Kaggle* titulada como *Usos del suelo desde el espacio*.
