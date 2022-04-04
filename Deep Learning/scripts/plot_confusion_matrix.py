@@ -4,7 +4,7 @@ import pandas as pd
 import os 
 
 # Insert the path to a file which contains test predictions
-PRED_FILE = "./ensembles/14_xception_da_ftall_1e4.csv"
+PRED_FILE = ""
 
 # Read the predictions
 pred_df = pd.read_csv(PRED_FILE)
@@ -18,6 +18,7 @@ test_dict = dict(zip(os.listdir(TEST_DIR), test_labels))
 
 # Plot the confusion matrix. The labels should be numbers
 conf_matrix = confusion_matrix(list(test_dict.values()), list(map(lambda x: int(x), list(pred_df["label"].values))))
+print(conf_matrix)
 disp = ConfusionMatrixDisplay(conf_matrix)
 disp.plot(include_values=False, cmap=plt.cm.coolwarm)
 plt.show()

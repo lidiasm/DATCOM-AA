@@ -3,9 +3,9 @@ import os
 import pandas as pd
 
 # Insert the path to the test folder to read the images
-TEST_DIR = "../../../Prácticas/Deep Learning/Test 2/Test 2"
+TEST_DIR = "./Test 2/Test 2"
 # Insert the path and filename of the predictions
-PRED_FILE = "../../../Prácticas/Deep Learning/Predictions/1_xception_test.csv"
+PRED_FILE = ""
 
 # Get test labels from the test images
 test_labels = [file[:file.index("_")] for file in os.listdir(TEST_DIR)]

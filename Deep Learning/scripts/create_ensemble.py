@@ -4,23 +4,15 @@ import pandas as pd
 
 # Insert the path to the test folder to read the images
 TEST_DIR = "./Test 2/Test 2"
-# List of prediction files
-PRED_FILES = [
-    "./files/5_xception_ft100.csv", #93%
-    "./files/14_xception_da_ftall_1e4.csv", #94%
-    "./files/15_xception_ft100_ie4.csv", #92%
-    "./files/16_xception_dav2_ftall_1e4.csv", #92%
-    "./files/17_xception_da_ftall_1e4_35e.csv", #94%
-]
-# Weights for each classifier depending on its score
-WEIGHTS = [0.1, 0.4, 0.3, 0.2, 0.5]
+# Insert the path to the folder which contains the prediction files
+PRED_PATH = "./files/"
 
 # Load the list of predictions from the different classifiers 
 # in dictionaries whose keys are the test filenames and whose values
 # are the test labels
 pred_list = []
-for pred_file in PRED_FILES:
-    pred_df = pd.read_csv(pred_file)
+for pred_file in os.listdir(PRED_PATH):
+    pred_df = pd.read_csv(PRED_PATH+pred_file)
     pred_list.append(dict(zip(list(pred_df["id.jpg"].values), list(pred_df["label"].values))))
 
 # Get test labels from the test images
@@ -46,9 +38,11 @@ for test_img in test_dict:
 print("Accuracy: ", (accuracy/len(test_dict))*100)
 # Create submission file
 submission_df = pd.DataFrame({'id.jpg': list(test_dict.keys()), 'label': ensemble_preds})
-submission_df.to_csv("most_voted_ensemble.csv", index=False)
+submission_df.to_csv("39_ensemble.csv", index=False)
 
 ###################################### WEIGHTED ENSEMBLE ######################################
+# Weights for each classifier depending on its score
+WEIGHTS = [0.1, 0.4, 0.3, 0.2, 0.5]
 # Iterate over the test images to choose the most voted class between the classifiers
 ensemble_preds = []
 # Calculate the accuracy over the test dataset
