@@ -19,6 +19,7 @@ test_dict = dict(zip(os.listdir(TEST_DIR), test_labels))
 # Plot the confusion matrix. The labels should be numbers
 conf_matrix = confusion_matrix(list(test_dict.values()), list(map(lambda x: int(x), list(pred_df["label"].values))))
 print(conf_matrix)
-disp = ConfusionMatrixDisplay(conf_matrix)
+# Set the range of labels to be plotted on the chart (1-29)
+disp = ConfusionMatrixDisplay(conf_matrix, display_labels=list(range(1, 30)))
 disp.plot(include_values=False, cmap=plt.cm.coolwarm)
 plt.show()
